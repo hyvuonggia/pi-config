@@ -1,0 +1,56 @@
+{
+  "lastChangelogVersion": "0.79.6",
+  "theme": "dark",
+  "defaultProvider": "opencode-go",
+  "defaultModel": "minimax-m3",
+  "defaultThinkingLevel": "high",
+  "packages": [
+    "npm:pi-subagents",
+    "npm:pi-simplify",
+    "npm:pi-web-access",
+    "npm:pi-mcp-adapter",
+    "npm:@juicesharp/rpiv-todo",
+    "git:github.com/obra/superpowers",
+    "npm:context-mode"
+  ],
+  "subagents": {
+    "agentOverrides": {
+      "oracle": {
+        "model": "opencode-go/deepseek-v4-pro",
+        "thinking": "high",
+        "skills": [
+          "simplify"
+        ]
+      },
+      "council": {
+        "model": "opencode-go/deepseek-v4-pro",
+        "thinking": "high",
+        "skills": []
+      },
+      "librarian": {
+        "model": "opencode-go/minimax-m3",
+        "skills": [],
+        "inheritSkills": false
+      },
+      "explorer": {
+        "model": "opencode-go/deepseek-v4-flash",
+        "thinking": "high",
+        "skills": []
+      },
+      "designer": {
+        "model": "opencode-go/kimi-k2.6",
+        "thinking": "medium",
+        "skills": []
+      },
+      "fixer": {
+        "model": "opencode-go/deepseek-v4-pro",
+        "thinking": "high",
+        "skills": []
+      },
+      "observer": {
+        "model": "opencode-go/kimi-k2.6",
+        "skills": []
+      }
+    }
+  }
+}
