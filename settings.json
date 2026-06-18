@@ -43,7 +43,7 @@
         "skills": []
       },
       "fixer": {
-        "model": "opencode-go/deepseek-v4-pro",
+        "model": "opencode-go/minimax-m3",
         "thinking": "high",
         "skills": []
       },

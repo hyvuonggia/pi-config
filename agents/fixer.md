@@ -1,9 +1,9 @@
 ---
 name: fixer
 description: Fast, scoped implementation specialist. Use when the plan, spec, or instructions are clear and you need a builder — not a thinker — to turn approved direction into working code. Narrow, correct changes. No scope expansion.
-model: opencode-go/deepseek-v4-pro
+model: opencode-go/minimax-m3
 tools: read, grep, find, ls, bash, edit, write, intercom
-thinking: xhigh
+thinking: high
 systemPromptMode: replace
 inheritProjectContext: true
 inheritSkills: false
