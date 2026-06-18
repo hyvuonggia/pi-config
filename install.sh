@@ -30,11 +30,116 @@ fi
 
 echo "==> Done. Installed APPEND_SYSTEM.md to: ${TARGET_FILE}"
 
+# --- Subagent definitions ---
+AGENTS_SRC_DIR="${SCRIPT_DIR}/agents"
+AGENTS_TARGET_DIR="${TARGET_DIR}/agents"
+
+merge_subagents_settings() {
+    local fragment_file="$1"
+    local target_file="${TARGET_DIR}/settings.json"
+
+    if [[ ! -f "${target_file}" ]]; then
+        echo "==> Creating ${target_file} from repo settings.json"
+        cp "${fragment_file}" "${target_file}"
+        return 0
+    fi
+
+    echo "==> Merging subagents config into ${target_file}"
+    set +e
+    if command -v jq >/dev/null 2>&1; then
+        local tmp
+        tmp="$(mktemp)"
+        jq -s '.[0] as $user | .[1] as $frag | $user * { subagents: ($user.subagents // {}) * ($frag.subagents // {}) }' "${target_file}" "${fragment_file}" > "${tmp}"
+        local jq_rc=$?
+        if [[ ${jq_rc} -eq 0 ]] && [[ -s "${tmp}" ]]; then
+            mv "${tmp}" "${target_file}"
+            echo "    Merged via jq."
+            set -e
+            return 0
+        fi
+        rm -f "${tmp}"
+        echo "    [WARN] jq merge failed (exit ${jq_rc}) — falling back."
+    fi
+
+    if command -v node >/dev/null 2>&1; then
+        node -e "
+            const fs = require('fs');
+            const user = JSON.parse(fs.readFileSync(process.argv[1], 'utf8'));
+            const frag = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+            const fragSub = frag.subagents || {};
+            user.subagents = user.subagents || {};
+            user.subagents.agentOverrides = Object.assign({}, user.subagents.agentOverrides || {}, fragSub.agentOverrides || {});
+            fs.writeFileSync(process.argv[1], JSON.stringify(user, null, 2));
+        " "${target_file}" "${fragment_file}" 2>/dev/null
+        if [[ $? -eq 0 ]]; then
+            echo "    Merged via node."
+            set -e
+            return 0
+        fi
+        echo "    [WARN] node merge failed — falling back."
+    fi
+
+    echo "[WARN] Neither jq nor node could merge settings.json. Install jq (https://stedolan.github.io/jq/) and re-run install.sh, or merge manually."
+    set -e
+    return 1
+}
+
+echo "==> Installing subagent definitions to ${AGENTS_TARGET_DIR}"
+mkdir -p "${AGENTS_TARGET_DIR}"
+
+SUBFETCHED=0
+SUBEXPECTED=7
+
+if [[ -d "${AGENTS_SRC_DIR}" ]]; then
+    set +e
+    cp -f "${AGENTS_SRC_DIR}"/*.md "${AGENTS_TARGET_DIR}/" 2>/dev/null
+    cp_rc=$?
+    set -e
+    if [[ ${cp_rc} -eq 0 ]]; then
+        SUBFETCHED=$(ls -1 "${AGENTS_TARGET_DIR}"/*.md 2>/dev/null | wc -l)
+        echo "    Copied ${SUBFETCHED} subagent file(s) from local source."
+    fi
+else
+    SUFFIXES=("council" "designer" "explorer" "fixer" "librarian" "observer" "oracle")
+    set +e
+    for name in "${SUFFIXES[@]}"; do
+        if command -v curl >/dev/null 2>&1; then
+            curl -fsSL "${REPO_URL}/agents/${name}.md" -o "${AGENTS_TARGET_DIR}/${name}.md" 2>/dev/null && SUBFETCHED=$((SUBFETCHED + 1))
+        elif command -v wget >/dev/null 2>&1; then
+            wget -q "${REPO_URL}/agents/${name}.md" -O "${AGENTS_TARGET_DIR}/${name}.md" 2>/dev/null && SUBFETCHED=$((SUBFETCHED + 1))
+        fi
+    done
+    set -e
+    echo "    Downloaded ${SUBFETCHED}/${#SUFFIXES[@]} subagent file(s) from ${REPO_URL}."
+fi
+
+# --- Settings.json merge (subagents config only) ---
+SETTINGS_FRAGMENT="${SCRIPT_DIR}/settings.json"
+if [[ -f "${SETTINGS_FRAGMENT}" ]]; then
+    merge_subagents_settings "${SETTINGS_FRAGMENT}"
+else
+    set +e
+    TMP_SETTINGS="$(mktemp)"
+    fetch_rc=1
+    if command -v curl >/dev/null 2>&1; then
+        curl -fsSL "${REPO_URL}/settings.json" -o "${TMP_SETTINGS}" 2>/dev/null && fetch_rc=0
+    elif command -v wget >/dev/null 2>&1; then
+        wget -q "${REPO_URL}/settings.json" -O "${TMP_SETTINGS}" 2>/dev/null && fetch_rc=0
+    fi
+    if [[ ${fetch_rc} -eq 0 ]] && [[ -f "${TMP_SETTINGS}" ]]; then
+        merge_subagents_settings "${TMP_SETTINGS}"
+    fi
+    rm -f "${TMP_SETTINGS}"
+    set -e
+fi
+
 # --- Pi package installs (best-effort) ---
 PI_INSTALLED=0
 PI_TOTAL=4
 
-if command -v pi >/dev/null 2>&1; then
+if [[ "${PI_NO_INSTALL:-0}" == "1" ]]; then
+    echo "[SKIP] PI_NO_INSTALL=1 — skipping pi package installs"
+elif command -v pi >/dev/null 2>&1; then
     set +e
 
     echo "==> Installing git:github.com/obra/superpowers"
@@ -79,8 +184,8 @@ pi install "npm:pi-web-access"
 
 
     set -e
-    echo "==> Done. Installed APPEND_SYSTEM.md and ${PI_INSTALLED}/${PI_TOTAL} pi packages."
+    echo "==> Done. Installed APPEND_SYSTEM.md, ${SUBFETCHED}/${SUBEXPECTED} subagents, and ${PI_INSTALLED}/${PI_TOTAL} pi packages."
 else
     echo "[WARN] pi CLI not found on PATH — skipping pi package installs"
-    echo "==> Done. Installed APPEND_SYSTEM.md. Skipped pi package installs (pi CLI not on PATH)."
+    echo "==> Done. Installed APPEND_SYSTEM.md and ${SUBFETCHED}/${SUBEXPECTED} subagents. Skipped pi package installs (pi CLI not on PATH)."
 fi
