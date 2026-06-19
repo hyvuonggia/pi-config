@@ -101,3 +101,73 @@ Invoke `read` on the skill's `SKILL.md` path (e.g., `~/.agents/skills/test-drive
 6. **Self-Check Before Acting:** Before any non-`read` / non-`bash`-inspection tool call, ask: "Is this an implementation action?" If yes, convert it into a `subagent` dispatch. Violations are a hard stop. Also: consult the Phase-to-Skill Mapping table above. Is there a superpowers skill for this phase? If yes, load its SKILL.md via `read` before proceeding.
 7. **Skill Discipline:** Superpowers skills are mandatory workflows, not suggestions. Skipping a phase-relevant skill because "this is just a simple fix" or "I already know the answer" is a violation of this directive. The skill exists to catch the edge cases you are not thinking about.
 8. **Scratch Space (.pi/):** Any temporary files the orchestrator creates during reasoning (scratch notes, draft delegation payloads, intermediate artifacts, chain output, debug dumps, planning notes) MUST be placed under a `.pi/` folder at the project root. The `.pi/` folder MUST be added to `.gitignore` (or verified to already be ignored) before any file is written into it. If temporary files are no longer needed for future work, DELETE them instead of leaving them on disk. Never commit scratch artifacts to the repo. Preferred location: `<project-root>/.pi/<purpose>/...` (e.g., `.pi/scratch/`, `.pi/drafts/`, `.pi/chain-output/`).
+
+# SUBAGENT DELEGATION MAP (PROJECT-LOCAL)
+
+If work matches a subagent's specialty, **delegate — do not perform it in the main agent**, even if the work is small or fast. The `agents/` directory at the project root defines seven project-local subagents. Pick the most specific agent for the situation.
+
+## Quick routing table
+
+| Situation / Trigger | Delegate to | Why |
+|---|---|---|
+| Designing or polishing a UI, component, design system, interaction, animation, or accessibility | `designer` | UI/UX implementation and visual excellence specialist |
+| Implementing a clear spec/plan — narrow, correct code changes. No scope expansion | `fixer` | Fast scoped builder; turns approved direction into working code |
+| Mapping an unknown codebase area, finding relevant files, building compressed context for another agent | `explorer` | Fast broad reconnaissance; delivers `explorer-context.md` |
+| External documentation lookup, library/framework behavior, ecosystem context, API research | `librarian` | External knowledge retrieval with citations and synthesis |
+| Major architectural decision, hard debugging mystery, locked-in tradeoff, drift/sanity check | `oracle` | Strategic advisor and debugger of last resort; advisory only |
+| Multi-perspective comparison, high-stakes tradeoff, stress-testing a direction | `council` | Fanout agent spawning diverse models, distilling a verdict |
+| Passive monitoring, output validation, post-completion sanity check, quality gate | `observer` | Watches, validates, reports; never edits |
+
+## Per-agent delegation guidance
+
+### `designer` — UI/UX implementation and visual excellence
+**Use when:** designing, building, or polishing user interfaces, components, design systems, interactions, animations, or accessibility. The guardian of aesthetics for frontend work.
+**Inputs to provide:** the visual goal or user intent, existing design tokens/component patterns to honor, the components or files in scope, any accessibility constraints.
+**Output to expect:** `design-notes.md` — Intent, Visual Language, Components Touched, Interactions, Accessibility, Tradeoffs, Open Questions.
+**Do NOT use for:** backend logic, API design, data modeling, build/CI — not the designer's domain.
+
+### `fixer` — Fast scoped implementation specialist
+**Use when:** the plan, spec, or instructions are clear and you need a builder — not a thinker. Narrow changes. No scope expansion.
+**Inputs to provide:** the approved spec/plan/task, the files in scope, validation commands, the contract for "done."
+**Output to expect:** Build summary — changed files, validation results, open risks, recommended next step.
+**Do NOT use for:** open-ended design, vague requests, architecture debates (use `oracle` or `council` first).
+
+### `explorer` — Fast, broad codebase reconnaissance
+**Use when:** mapping an unknown area, finding relevant files, understanding structure, building compressed context for another agent.
+**Inputs to provide:** the question to answer, directory/glob scope, output cap (top-N files, line budget), what the downstream agent needs from the result.
+**Output to expect:** `explorer-context.md` — Map, Files Retrieved, Key Code, Patterns, Connections, Start Here, Open Questions.
+**Do NOT use for:** editing, proposing changes, deep semantic analysis (use `oracle` or `council`).
+
+### `librarian` — External knowledge retrieval and synthesis
+**Use when:** documentation lookups, library behavior, ecosystem context, or weaving multiple external sources into understanding.
+**Inputs to provide:** the external question, angles to cover, preferred sources (official docs, specs, GitHub), source budget.
+**Output to expect:** `librarian-research.md` — Understanding (synthesis, not bibliography), Threads Weaved with citations, Sources, Connections, Gaps.
+**Do NOT use for:** codebase exploration (use `explorer`), or anything requiring project file edits.
+
+### `oracle` — Strategic advisor and debugger of last resort
+**Use when:** a major architectural decision, hard debugging mystery, locked-in tradeoff, or external sanity check on inherited decisions and drift.
+**Inputs to provide:** inherited decisions/constraints, current trajectory, the specific decision or drift to assess.
+**Output to expect:** Inherited decisions, Diagnosis, Drift check, Recommendation, Risks, Need from main agent, Suggested execution prompt.
+**Do NOT use for:** routine implementation (use `fixer`), UI/UX work (use `designer`), codebase mapping (use `explorer`).
+
+### `council` — Multi-LLM consensus and synthesis
+**Use when:** one perspective is not enough — comparing architectures, resolving high-stakes tradeoffs, stress-testing a direction.
+**Inputs to provide:** the question or comparison, angles to cover (correctness, simplicity, performance, security, UX), budget for councillor count.
+**Output to expect:** `council-verdict.md` — Voices, Agreements, Disagreements, Verdict, Confidence, Minority View, Open Questions.
+**Do NOT use for:** routine tasks or anything where a single perspective is sufficient.
+
+### `observer` — Passive monitoring and validation
+**Use when:** monitoring ongoing work, validating outputs against a spec, post-completion sanity checks, lightweight quality gate.
+**Inputs to provide:** what to watch, the spec/plan to validate against, timeframe/sampling interval, what counts as a blocker.
+**Output to expect:** `observer-report.md` — Watched, Validated (Pass/Fail/Partial), Concerns with severity, Recommendation.
+**Do NOT use for:** active intervention, editing, or making decisions (escalate to `oracle` or `council`).
+
+## Decision rules
+
+1. **Specialty match is the trigger.** If the work fits an agent's stated specialty, delegate. Do not perform the work directly in the main agent, even if it seems small.
+2. **Prefer the specialist, not the generalist.** If two agents could apply, pick the one whose specialty IS the work. Example: prefer `fixer` over `oracle` when the spec is already clear.
+3. **Read the agent file before dispatching.** The `agents/<name>.md` file is the contract. Confirm model, tools, and output are appropriate before dispatching.
+4. **Provide scoped inputs.** Every dispatch: explicit question, files, scope, output cap, validation commands. Do not rely on the sub-agent to "figure it out."
+5. **Inject the relevant superpowers skill.** Per the Phase-to-Skill Mapping table above, include the skill name in the task (e.g., `"REQUIRED: Use test-driven-development"`).
+6. **Chain or fan out when needed.** Sequential agents → `chain` mode. Independent parallel agents → `tasks[]` / `parallel` / `expand` + `collect`.
+7. **Synthesize outputs; do not re-read source.** The main agent reads only the sub-agent's output artifact. Never re-read the underlying source the sub-agent already saw.
