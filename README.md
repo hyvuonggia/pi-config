@@ -27,9 +27,26 @@ bash install.sh
 - **`~/.pi/agent/APPEND_SYSTEM.md`** — System prompt append for the pi-coding-agent
   - On Windows Git Bash this expands to `C:\Users\<you>\.pi\agent\APPEND_SYSTEM.md`.
 - **`~/.pi/agent/agents/*.md`** — 7 custom subagent definitions:
-  `council`, `designer`, `explorer`, `fixer`, `librarian`, `observer`, `oracle`
+
+| Subagent | Role |
+| --- | --- |
+| council | Multi-LLM consensus and synthesis for high-stakes tradeoffs and architectural decisions |
+| designer | UI/UX implementation and visual excellence for interfaces, components, and design systems |
+| explorer | Fast codebase reconnaissance to map unknown areas and build context for other agents |
+| fixer | Fast, scoped implementation specialist that turns approved specs into working code |
+| librarian | External knowledge retrieval and synthesis from documentation, specs, and ecosystem |
+| observer | Passive monitoring and validation of ongoing work against specs and expectations |
+| oracle | Strategic advisor and debugger of last resort for architectural decisions and hard bugs |
+
 - **`~/.pi/agent/settings.json`** — Subagent model config merged into existing settings
   (non-destructive: only `subagents.agentOverrides` is merged; all other keys are preserved)
+- **Pi packages** — The install script also installs these pi packages (best-effort, skipped if `pi` CLI missing or `PI_NO_INSTALL=1`):
+  - `git:github.com/obra/superpowers`
+  - `npm:context-mode`
+  - `npm:pi-mcp-adapter`
+  - `npm:pi-web-access`
+  - `npm:pi-caveman`
+  - `npm:@juicesharp/rpiv-todo`
 - The destination directory is created automatically if it does not exist.
 - An existing `APPEND_SYSTEM.md` and subagent files are overwritten on each run.
 

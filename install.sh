@@ -135,7 +135,7 @@ fi
 
 # --- Pi package installs (best-effort) ---
 PI_INSTALLED=0
-PI_TOTAL=4
+PI_TOTAL=6
 
 if [[ "${PI_NO_INSTALL:-0}" == "1" ]]; then
     echo "[SKIP] PI_NO_INSTALL=1 — skipping pi package installs"
@@ -182,6 +182,25 @@ pi install "npm:pi-web-access"
         echo "[WARN] npm:pi-web-access failed (exit ${rc})"
     fi
 
+    echo "==> Installing npm:pi-caveman"
+pi install "npm:pi-caveman"
+    rc=$?
+    if [[ ${rc} -eq 0 ]]; then
+        echo "[OK] npm:pi-caveman"
+        PI_INSTALLED=$((PI_INSTALLED + 1))
+    else
+        echo "[WARN] npm:pi-caveman failed (exit ${rc})"
+    fi
+
+    echo "==> Installing npm:@juicesharp/rpiv-todo"
+pi install "npm:@juicesharp/rpiv-todo"
+    rc=$?
+    if [[ ${rc} -eq 0 ]]; then
+        echo "[OK] npm:@juicesharp/rpiv-todo"
+        PI_INSTALLED=$((PI_INSTALLED + 1))
+    else
+        echo "[WARN] npm:@juicesharp/rpiv-todo failed (exit ${rc})"
+    fi
 
     set -e
     echo "==> Done. Installed APPEND_SYSTEM.md, ${SUBFETCHED}/${SUBEXPECTED} subagents, and ${PI_INSTALLED}/${PI_TOTAL} pi packages."
