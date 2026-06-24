@@ -102,72 +102,79 @@ Invoke `read` on the skill's `SKILL.md` path (e.g., `~/.agents/skills/test-drive
 7. **Skill Discipline:** Superpowers skills are mandatory workflows, not suggestions. Skipping a phase-relevant skill because "this is just a simple fix" or "I already know the answer" is a violation of this directive. The skill exists to catch the edge cases you are not thinking about.
 8. **Scratch Space (.pi/):** Any temporary files the orchestrator creates during reasoning (scratch notes, draft delegation payloads, intermediate artifacts, chain output, debug dumps, planning notes) MUST be placed under a `.pi/` folder at the project root. The `.pi/` folder MUST be added to `.gitignore` (or verified to already be ignored) before any file is written into it. If temporary files are no longer needed for future work, DELETE them instead of leaving them on disk. Never commit scratch artifacts to the repo. Preferred location: `<project-root>/.pi/<purpose>/...` (e.g., `.pi/scratch/`, `.pi/drafts/`, `.pi/chain-output/`).
 
-# SUBAGENT DELEGATION MAP (PROJECT-LOCAL)
+# SUBAGENT DELEGATION MAP (BUILTINS)
 
-If work matches a subagent's specialty, **delegate — do not perform it in the main agent**, even if the work is small or fast. The `agents/` directory at the project root defines seven project-local subagents. Pick the most specific agent for the situation.
+Pi ships 8 built-in subagents via the `pi-subagents` package. All agents inherit your current Pi default model unless overridden in `@settings.json` → `subagents.agentOverrides` (this project pins all 8 to `opencode-go/deepseek-v4-pro` + `thinking: xhigh`). Per-agent contracts live in the package files; inspect the live runtime mapping with `/subagents-models`.
 
 ## Quick routing table
 
 | Situation / Trigger | Delegate to | Why |
 |---|---|---|
-| Designing or polishing a UI, component, design system, interaction, animation, or accessibility | `designer` | UI/UX implementation and visual excellence specialist |
-| Implementing a clear spec/plan — narrow, correct code changes. No scope expansion | `fixer` | Fast scoped builder; turns approved direction into working code |
-| Mapping an unknown codebase area, finding relevant files, building compressed context for another agent | `explorer` | Fast broad reconnaissance; delivers `explorer-context.md` |
-| External documentation lookup, library/framework behavior, ecosystem context, API research | `librarian` | External knowledge retrieval with citations and synthesis |
-| Major architectural decision, hard debugging mystery, locked-in tradeoff, drift/sanity check | `oracle` | Strategic advisor and debugger of last resort; advisory only |
-| Multi-perspective comparison, high-stakes tradeoff, stress-testing a direction | `council` | Fanout agent spawning diverse models, distilling a verdict |
-| Passive monitoring, output validation, post-completion sanity check, quality gate | `observer` | Watches, validates, reports; never edits |
+| Analyzing requirements, generating context/meta-prompt for a complex task | `context-builder` | Synthesizes codebase state + intent into a focused brief |
+| Quick delegated execution that should inherit the parent's model and have no default reads | `delegate` | Lightweight passthrough; ideal for prompt-template child runs |
+| Major architectural decision, hard debugging mystery, locked-in tradeoff, drift/sanity check | `oracle` | Strategic advisor, advisory only — does not edit |
+| Approved spec, need a multi-step implementation plan before touching code | `planner` | Writes the plan; does not implement |
+| External documentation lookup, current best practices, ecosystem research | `researcher` | Autonomous web research → focused brief |
+| Pre-merge code review, plan validation, post-completion sanity check, PR/issue validation, small fixes | `reviewer` | Diffs/plans/PR validation; may apply small fixes per creator spec |
+| Mapping an unknown codebase area, finding relevant files, entry points, data flow, risks, and where another agent should start | `scout` | Fast broad recon; delivers compressed handoff |
+| Implementing an approved plan, normal tasks, or post-oracle handoffs | `worker` | Default implementation agent; forked context |
 
 ## Per-agent delegation guidance
 
-### `designer` — UI/UX implementation and visual excellence
-**Use when:** designing, building, or polishing user interfaces, components, design systems, interactions, animations, or accessibility. The guardian of aesthetics for frontend work.
-**Inputs to provide:** the visual goal or user intent, existing design tokens/component patterns to honor, the components or files in scope, any accessibility constraints.
-**Output to expect:** `design-notes.md` — Intent, Visual Language, Components Touched, Interactions, Accessibility, Tradeoffs, Open Questions.
-**Do NOT use for:** backend logic, API design, data modeling, build/CI — not the designer's domain.
+### `context-builder` — Stronger setup pass before planning
+**Use when:** entering a complex task and you need a richer setup pass before planning — gathers code context and writes handoff material that another agent can consume.
+**Inputs:** the task, repo root / module glob, output cap, intended downstream agent.
+**Output:** handoff material such as `context.md` and `meta-prompt.md` that another agent (typically `planner` or `worker`) consumes.
+**Do NOT use for:** direct implementation, design debates, single-file edits.
 
-### `fixer` — Fast scoped implementation specialist
-**Use when:** the plan, spec, or instructions are clear and you need a builder — not a thinker. Narrow changes. No scope expansion.
-**Inputs to provide:** the approved spec/plan/task, the files in scope, validation commands, the contract for "done."
-**Output to expect:** Build summary — changed files, validation results, open risks, recommended next step.
-**Do NOT use for:** open-ended design, vague requests, architecture debates (use `oracle` or `council` first).
+### `delegate` — Lightweight passthrough
+**Use when:** you want a child run that inherits the parent's model/context, with no default reads and no agent-specific behavior. Designed for prompt-template delegated execution.
+**Inputs:** the child task; output destination if persistent.
+**Output:** whatever the child task produces.
+**Do NOT use for:** anything that needs role-specific behavior — pick a specialist.
 
-### `explorer` — Fast, broad codebase reconnaissance
+### `oracle` — Strategic advisor (advisory only)
+**Use when:** major architectural decision, hard debugging mystery, locked-in tradeoff, or sanity check on inherited decisions and drift. `oracle` is advisory — it critiques direction and proposes an execution prompt, never edits files.
+**Inputs:** inherited decisions/constraints, current trajectory, the specific decision or drift to assess.
+**Output:** Inherited decisions, Diagnosis, Drift check, Recommendation, Risks, Need from main agent, Suggested execution prompt.
+**Do NOT use for:** routine implementation, UI/UX work, codebase mapping.
+
+### `planner` — Implementation planning
+**Use when:** you have a spec and need an isolated, ordered plan before code. Default context is `fork` so planning does not pollute the orchestrator's session.
+**Inputs:** the spec/requirements, target module(s), constraints, validation commands.
+**Output:** a concrete implementation plan with tasks, dependencies, and acceptance criteria.
+**Do NOT use for:** open-ended brainstorming (use `oracle` first), direct implementation. `planner` reads and plans — it does not edit code.
+
+### `researcher` — Autonomous web research
+**Use when:** you need external documentation, library behavior, ecosystem context, or current best-practice signals that are not in the repo.
+**Inputs:** the research question, preferred sources, source budget.
+**Output:** a focused research brief with synthesized findings and citations.
+**Do NOT use for:** codebase exploration (use `scout`), or anything requiring project file edits.
+
+### `reviewer` — Code review and small fixes
+**Use when:** completing tasks, implementing major features, or before merging — verify the implementation against the task/plan, tests, edge cases, and simplicity. May apply small fixes as part of the review.
+**Inputs:** the diff or plan, the spec/requirements to validate against, the merge target.
+**Output:** a review report (Pass/Fail/Concerns/Recommendation) plus any small fixes applied.
+**Do NOT use for:** large edits, refactors, or making decisions outside the review scope (escalate to `oracle` or `planner`).
+
+### `scout` — Fast codebase recon
 **Use when:** mapping an unknown area, finding relevant files, understanding structure, building compressed context for another agent.
-**Inputs to provide:** the question to answer, directory/glob scope, output cap (top-N files, line budget), what the downstream agent needs from the result.
-**Output to expect:** `explorer-context.md` — Map, Files Retrieved, Key Code, Patterns, Connections, Start Here, Open Questions.
-**Do NOT use for:** editing, proposing changes, deep semantic analysis (use `oracle` or `council`).
+**Inputs:** the question to answer, directory/glob scope, output cap (top-N files, line budget), what the downstream agent needs.
+**Output:** a compressed `scout-context.md`-style brief.
+**Do NOT use for:** editing, proposing changes, deep semantic analysis (use `oracle` or `planner`).
 
-### `librarian` — External knowledge retrieval and synthesis
-**Use when:** documentation lookups, library behavior, ecosystem context, or weaving multiple external sources into understanding.
-**Inputs to provide:** the external question, angles to cover, preferred sources (official docs, specs, GitHub), source budget.
-**Output to expect:** `librarian-research.md` — Understanding (synthesis, not bibliography), Threads Weaved with citations, Sources, Connections, Gaps.
-**Do NOT use for:** codebase exploration (use `explorer`), or anything requiring project file edits.
-
-### `oracle` — Strategic advisor and debugger of last resort
-**Use when:** a major architectural decision, hard debugging mystery, locked-in tradeoff, or external sanity check on inherited decisions and drift.
-**Inputs to provide:** inherited decisions/constraints, current trajectory, the specific decision or drift to assess.
-**Output to expect:** Inherited decisions, Diagnosis, Drift check, Recommendation, Risks, Need from main agent, Suggested execution prompt.
-**Do NOT use for:** routine implementation (use `fixer`), UI/UX work (use `designer`), codebase mapping (use `explorer`).
-
-### `council` — Multi-LLM consensus and synthesis
-**Use when:** one perspective is not enough — comparing architectures, resolving high-stakes tradeoffs, stress-testing a direction.
-**Inputs to provide:** the question or comparison, angles to cover (correctness, simplicity, performance, security, UX), budget for councillor count.
-**Output to expect:** `council-verdict.md` — Voices, Agreements, Disagreements, Verdict, Confidence, Minority View, Open Questions.
-**Do NOT use for:** routine tasks or anything where a single perspective is sufficient.
-
-### `observer` — Passive monitoring and validation
-**Use when:** monitoring ongoing work, validating outputs against a spec, post-completion sanity checks, lightweight quality gate.
-**Inputs to provide:** what to watch, the spec/plan to validate against, timeframe/sampling interval, what counts as a blocker.
-**Output to expect:** `observer-report.md` — Watched, Validated (Pass/Fail/Partial), Concerns with severity, Recommendation.
-**Do NOT use for:** active intervention, editing, or making decisions (escalate to `oracle` or `council`).
+### `worker` — Default implementation agent
+**Use when:** implementing an approved plan, executing normal tasks, or acting on an approved `oracle` handoff. Edits files, validates, and escalates unapproved decisions instead of guessing. Default context is `fork` so the implementation does not bleed into the orchestrator's session.
+**Inputs:** the approved plan/spec, the files in scope, validation commands, the contract for "done."
+**Output:** build summary — changed files, validation results, open risks, recommended next step.
+**Do NOT use for:** open-ended design, vague requests, architecture debates (use `oracle` or `planner` first).
 
 ## Decision rules
 
-1. **Specialty match is the trigger.** If the work fits an agent's stated specialty, delegate. Do not perform the work directly in the main agent, even if it seems small.
-2. **Prefer the specialist, not the generalist.** If two agents could apply, pick the one whose specialty IS the work. Example: prefer `fixer` over `oracle` when the spec is already clear.
-3. **Read the agent file before dispatching.** The `agents/<name>.md` file is the contract. Confirm model, tools, and output are appropriate before dispatching.
+1. **Specialty match is the trigger.** If the work fits a builtin's stated specialty, delegate. Do not perform the work directly in the main agent, even if it seems small.
+2. **Prefer the specialist, not the generalist.** If two builtins could apply, pick the one whose specialty IS the work. Example: prefer `worker` over `oracle` when the spec is already clear.
+3. **Trust the package contract.** Per-agent behavior is defined in the `pi-subagents` package files. Don't duplicate that knowledge — read the relevant file only when behavior is unclear.
 4. **Provide scoped inputs.** Every dispatch: explicit question, files, scope, output cap, validation commands. Do not rely on the sub-agent to "figure it out."
 5. **Inject the relevant superpowers skill.** Per the Phase-to-Skill Mapping table above, include the skill name in the task (e.g., `"REQUIRED: Use test-driven-development"`).
 6. **Chain or fan out when needed.** Sequential agents → `chain` mode. Independent parallel agents → `tasks[]` / `parallel` / `expand` + `collect`.
-7. **Synthesize outputs; do not re-read source.** The main agent reads only the sub-agent's output artifact. Never re-read the underlying source the sub-agent already saw.
+7. **Verify the live mapping.** Use `/subagents-models` to confirm the runtime-resolved model for a builtin — settings on disk do not apply until pi reloads.

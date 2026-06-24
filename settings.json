@@ -15,41 +15,37 @@
   ],
   "subagents": {
     "agentOverrides": {
-      "oracle": {
-        "model": "opencode-go/deepseek-v4-pro",
-        "thinking": "high",
-        "skills": [
-          "simplify"
-        ]
-      },
-      "council": {
-        "model": "opencode-go/deepseek-v4-pro",
-        "thinking": "high",
-        "skills": []
-      },
-      "librarian": {
+      "context-builder": {
         "model": "opencode-go/minimax-m3",
-        "skills": [],
-        "inheritSkills": false
+        "thinking": "high"
       },
-      "explorer": {
+      "delegate": {
+        "model": "opencode-go/kimi-k2.7-code",
+        "thinking": "high"
+      },
+      "oracle": {
+        "model": "opencode-go/qwen3.7-max",
+        "thinking": "high"
+      },
+      "planner": {
+        "model": "opencode-go/deepseek-v4-pro",
+        "thinking": "xhigh"
+      },
+      "researcher": {
+        "model": "opencode-go/qwen3.7-plus",
+        "thinking": "high"
+      },
+      "reviewer": {
+        "model": "opencode-go/glm-5.2",
+        "thinking": "high"
+      },
+      "scout": {
         "model": "opencode-go/deepseek-v4-flash",
-        "thinking": "high",
-        "skills": []
+        "thinking": "xhigh"
       },
-      "designer": {
-        "model": "opencode-go/kimi-k2.6",
-        "thinking": "medium",
-        "skills": []
-      },
-      "fixer": {
+      "worker": {
         "model": "opencode-go/deepseek-v4-flash",
-        "thinking": "xhigh",
-        "skills": []
-      },
-      "observer": {
-        "model": "opencode-go/kimi-k2.6",
-        "skills": []
+        "thinking": "xhigh"
       }
     }
   }

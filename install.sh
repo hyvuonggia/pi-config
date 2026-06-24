@@ -135,7 +135,7 @@ fi
 
 # --- Pi package installs (best-effort) ---
 PI_INSTALLED=0
-PI_TOTAL=8
+PI_TOTAL=9
 
 if [[ "${PI_NO_INSTALL:-0}" == "1" ]]; then
     echo "[SKIP] PI_NO_INSTALL=1 — skipping pi package installs"
@@ -220,6 +220,16 @@ pi install "npm:@vndv/pi-codegraph"
         PI_INSTALLED=$((PI_INSTALLED + 1))
     else
         echo "[WARN] npm:@vndv/pi-codegraph failed (exit ${rc})"
+    fi
+
+    echo "==> Installing npm:pi-subagents"
+pi install "npm:pi-subagents"
+    rc=$?
+    if [[ ${rc} -eq 0 ]]; then
+        echo "[OK] npm:pi-subagents"
+        PI_INSTALLED=$((PI_INSTALLED + 1))
+    else
+        echo "[WARN] npm:pi-subagents failed (exit ${rc})"
     fi
 
     set -e
