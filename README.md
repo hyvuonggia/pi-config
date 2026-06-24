@@ -39,6 +39,8 @@ bash install.sh
   - `npm:pi-powerline-footer`
   - `npm:@vndv/pi-codegraph`
   - `npm:pi-subagents`
+- **`~/.pi/agent/mcp.json`** — System-level MCP server config for context-mode
+  (idempotent merge: only `mcpServers.context-mode` is set; other `mcpServers` entries are preserved)
 - The destination directory is created automatically if it does not exist.
 - An existing `APPEND_SYSTEM.md` is overwritten on each run; other files are merged non-destructively.
 

@@ -84,6 +84,68 @@ merge_subagents_settings() {
     return 1
 }
 
+# --- MCP Server config ---
+merge_mcp_config() {
+    local target_file="$1"
+    local server_name="context-mode"
+    local server_command="context-mode"
+
+    if [[ ! -f "${target_file}" ]]; then
+        echo "==> Creating ${target_file} with ${server_name} MCP server"
+        mkdir -p "$(dirname "${target_file}")"
+        cat > "${target_file}" <<'EOF'
+{
+  "mcpServers": {
+    "context-mode": {
+      "command": "context-mode"
+    }
+  }
+}
+EOF
+        return 0
+    fi
+
+    echo "==> Merging ${server_name} MCP server into ${target_file}"
+    set +e
+    if command -v jq >/dev/null 2>&1; then
+        local tmp
+        tmp="$(mktemp)"
+        jq --arg name "${server_name}" --arg cmd "${server_command}" \
+            '.mcpServers = (.mcpServers // {}) | .mcpServers[$name] = {command: $cmd}' \
+            "${target_file}" > "${tmp}"
+        local jq_rc=$?
+        if [[ ${jq_rc} -eq 0 ]] && [[ -s "${tmp}" ]]; then
+            mv "${tmp}" "${target_file}"
+            echo "    Merged via jq."
+            set -e
+            return 0
+        fi
+        rm -f "${tmp}"
+        echo "    [WARN] jq merge failed (exit ${jq_rc}) — falling back."
+    fi
+
+    if command -v node >/dev/null 2>&1; then
+        node -e "
+            const fs = require('fs');
+            const target = JSON.parse(fs.readFileSync(process.argv[1], 'utf8'));
+            target.mcpServers = target.mcpServers || {};
+            target.mcpServers[process.argv[2]] = { command: process.argv[3] };
+            fs.writeFileSync(process.argv[1], JSON.stringify(target, null, 2));
+        " "${target_file}" "${server_name}" "${server_command}" 2>/dev/null
+        if [[ $? -eq 0 ]]; then
+            echo "    Merged via node."
+            set -e
+            return 0
+        fi
+        echo "    [WARN] node merge failed — falling back."
+    fi
+
+    echo "[WARN] Neither jq nor node available — cannot merge MCP config into ${target_file}. Install jq (https://stedolan.github.io/jq/) and re-run, or add manually:"
+    echo "       { \"mcpServers\": { \"${server_name}\": { \"command\": \"${server_command}\" } } }"
+    set -e
+    return 1
+}
+
 echo "==> Installing subagent definitions to ${AGENTS_TARGET_DIR}"
 mkdir -p "${AGENTS_TARGET_DIR}"
 
@@ -238,3 +300,8 @@ else
     echo "[WARN] pi CLI not found on PATH — skipping pi package installs"
     echo "==> Done. Installed APPEND_SYSTEM.md and ${SUBFETCHED}/${SUBEXPECTED} subagents. Skipped pi package installs (pi CLI not on PATH)."
 fi
+
+# --- MCP Server config (system-level) ---
+MCP_TARGET="${HOME}/.pi/agent/mcp.json"
+echo "==> Configuring context-mode MCP server at ${MCP_TARGET}"
+merge_mcp_config "${MCP_TARGET}"
