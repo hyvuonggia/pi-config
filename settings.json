@@ -43,8 +43,8 @@
         "skills": []
       },
       "fixer": {
-        "model": "opencode-go/minimax-m3",
-        "thinking": "high",
+        "model": "opencode-go/deepseek-v4-flash",
+        "thinking": "xhigh",
         "skills": []
       },
       "observer": {

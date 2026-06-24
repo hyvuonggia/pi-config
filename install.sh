@@ -135,7 +135,7 @@ fi
 
 # --- Pi package installs (best-effort) ---
 PI_INSTALLED=0
-PI_TOTAL=6
+PI_TOTAL=8
 
 if [[ "${PI_NO_INSTALL:-0}" == "1" ]]; then
     echo "[SKIP] PI_NO_INSTALL=1 — skipping pi package installs"
@@ -200,6 +200,26 @@ pi install "npm:@juicesharp/rpiv-todo"
         PI_INSTALLED=$((PI_INSTALLED + 1))
     else
         echo "[WARN] npm:@juicesharp/rpiv-todo failed (exit ${rc})"
+    fi
+
+    echo "==> Installing npm:pi-powerline-footer"
+pi install "npm:pi-powerline-footer"
+    rc=$?
+    if [[ ${rc} -eq 0 ]]; then
+        echo "[OK] npm:pi-powerline-footer"
+        PI_INSTALLED=$((PI_INSTALLED + 1))
+    else
+        echo "[WARN] npm:pi-powerline-footer failed (exit ${rc})"
+    fi
+
+    echo "==> Installing npm:@vndv/pi-codegraph"
+pi install "npm:@vndv/pi-codegraph"
+    rc=$?
+    if [[ ${rc} -eq 0 ]]; then
+        echo "[OK] npm:@vndv/pi-codegraph"
+        PI_INSTALLED=$((PI_INSTALLED + 1))
+    else
+        echo "[WARN] npm:@vndv/pi-codegraph failed (exit ${rc})"
     fi
 
     set -e
