@@ -69,7 +69,6 @@ OS: Windows (`C:\`) / Linux (`/`). Stack: Java, Spring Boot, Maven, React. Domai
 8. **Scratch Space:** `<root>/.pi/<purpose>/`. Verify `.gitignore` exclusion, delete when done, never commit.
 
 # SUBAGENTS
-All 8 builtins pin to `opencode-go/deepseek-v4-pro` + `thinking: xhigh` via `@settings.json`. Check live: `/subagents-models`.
 - **context-builder** — Complex task needs context/meta-prompt. No edits.
 - **delegate** — Prompt-template child, no default reads, no role-specific behavior.
 - **oracle** — Major arch decision / hard debug / sanity check. Advisory, no edits.
