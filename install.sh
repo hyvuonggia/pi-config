@@ -88,16 +88,42 @@ merge_subagents_settings() {
 merge_mcp_config() {
     local target_file="$1"
     local server_name="context-mode"
-    local server_command="context-mode"
+    local server_command="context-mode" # Fallback if resolution fails
 
+    # 1. Dynamically resolve the absolute path for cross-platform support
+    if command -v context-mode >/dev/null 2>&1; then
+        server_command="$(command -v context-mode)"
+    else
+        # Use shell globbing to find the binary in common isolated paths
+        shopt -s nullglob
+        local possible_paths=(
+            "${HOME}/.local/share/pi-node/"*"/bin/context-mode" # Linux/macOS
+            "${LOCALAPPDATA:-${HOME}/AppData/Local}/pi-node/"*"/context-mode.cmd" # Windows AppData
+            "${LOCALAPPDATA:-${HOME}/AppData/Local}/pi-node/"*"/bin/context-mode.cmd" # Windows Alt
+            "${HOME}/.pi/agent/npm/node_modules/.bin/context-mode" # Legacy/Fallback
+        )
+        for p in "${possible_paths[@]}"; do
+            if [[ -f "$p" || -L "$p" ]]; then
+                server_command="$p"
+                break
+            fi
+        done
+        shopt -u nullglob
+    fi
+
+    # Ensure Windows backslashes are escaped properly for raw JSON generation
+    local json_safe_command="${server_command//\\/\\\\}"
+
+    # 2. Create from scratch if it doesn't exist
     if [[ ! -f "${target_file}" ]]; then
-        echo "==> Creating ${target_file} with ${server_name} MCP server"
+        echo "==> Creating ${target_file} with ${server_name} MCP server at ${server_command}"
         mkdir -p "$(dirname "${target_file}")"
-        cat > "${target_file}" <<'EOF'
+        # Note the change to EOF without quotes to allow variable expansion
+        cat > "${target_file}" <<EOF
 {
   "mcpServers": {
-    "context-mode": {
-      "command": "context-mode"
+    "${server_name}": {
+      "command": "${json_safe_command}"
     }
   }
 }
@@ -107,6 +133,8 @@ EOF
 
     echo "==> Merging ${server_name} MCP server into ${target_file}"
     set +e
+
+    # 3. Merge via jq
     if command -v jq >/dev/null 2>&1; then
         local tmp
         tmp="$(mktemp)"
@@ -124,6 +152,7 @@ EOF
         echo "    [WARN] jq merge failed (exit ${jq_rc}) — falling back."
     fi
 
+    # 4. Merge via node
     if command -v node >/dev/null 2>&1; then
         node -e "
             const fs = require('fs');
@@ -141,7 +170,7 @@ EOF
     fi
 
     echo "[WARN] Neither jq nor node available — cannot merge MCP config into ${target_file}. Install jq (https://stedolan.github.io/jq/) and re-run, or add manually:"
-    echo "       { \"mcpServers\": { \"${server_name}\": { \"command\": \"${server_command}\" } } }"
+    echo "       { \"mcpServers\": { \"${server_name}\": { \"command\": \"${json_safe_command}\" } } }"
     set -e
     return 1
 }
