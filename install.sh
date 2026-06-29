@@ -226,7 +226,7 @@ fi
 
 # --- Pi package installs (best-effort) ---
 PI_INSTALLED=0
-PI_TOTAL=9
+PI_TOTAL=10
 
 if [[ "${PI_NO_INSTALL:-0}" == "1" ]]; then
     echo "[SKIP] PI_NO_INSTALL=1 — skipping pi package installs"
@@ -291,6 +291,16 @@ pi install "npm:@juicesharp/rpiv-todo"
         PI_INSTALLED=$((PI_INSTALLED + 1))
     else
         echo "[WARN] npm:@juicesharp/rpiv-todo failed (exit ${rc})"
+    fi
+
+    echo "==> Installing npm:@juicesharp/rpiv-ask-user-question"
+pi install "npm:@juicesharp/rpiv-ask-user-question"
+    rc=$?
+    if [[ ${rc} -eq 0 ]]; then
+        echo "[OK] npm:@juicesharp/rpiv-ask-user-question"
+        PI_INSTALLED=$((PI_INSTALLED + 1))
+    else
+        echo "[WARN] npm:@juicesharp/rpiv-ask-user-question failed (exit ${rc})"
     fi
 
     echo "==> Installing npm:pi-powerline-footer"
